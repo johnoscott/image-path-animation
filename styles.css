@@ -168,3 +168,22 @@ button.replay {
     background: white;
     border: 1px solid #ccc;
 }
+
+.loop-controls {
+    display: flex;
+    align-items: center;
+    margin: 0 10px;
+}
+
+.loop-controls label {
+    margin-right: 10px;
+}
+
+.loop-controls input[type="number"] {
+    width: 34px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -17,6 +17,9 @@ const lineStyleSelect = document.getElementById('lineStyle');
 const thicknessValueInput = document.getElementById('thicknessValue'); // Add with other const declarations at top
 const CROSSHAIR_SIZE = 20; // Add with other const declarations at top
 const downloadImageButton = document.getElementById('downloadImageButton'); // Add to const declarations at top
+const loopCheckbox = document.getElementById('loopCheckbox');
+const loopCount = document.getElementById('loopCount');
+const stopButton = document.getElementById('stopButton');
 let image = new Image();
 let path = [];
 let isDrawing = false;
@@ -33,6 +36,60 @@ let mediaRecorder;
 let recordedChunks = [];
 let selectionBounds = null; // Add this with other global variables at the top
 let selectionCenter = null; // Add to the global variables at top
+let isAnimating = false;
+let animationFrame = null;
+
+// Add new functions for localStorage
+function saveOptions() {
+    const options = {
+        animationType: animationType,
+        zoom: zoom,
+        showOutline: showOutline,
+        outlineColor: outlineColor,
+        outlineThickness: outlineThickness,
+        lineStyle: lineStyle,
+        loopEnabled: loopCheckbox.checked,
+        loopCount: loopCount.value
+    };
+    localStorage.setItem('animationOptions', JSON.stringify(options));
+}
+
+function loadOptions() {
+    const saved = localStorage.getItem('animationOptions');
+    if (saved) {
+        const options = JSON.parse(saved);
+        
+        // Restore animation type
+        animationType = options.animationType;
+        document.querySelector(`input[name="animationType"][value="${options.animationType}"]`).checked = true;
+        
+        // Restore zoom
+        zoom = options.zoom;
+        zoomSlider.value = options.zoom;
+        
+        // Restore outline options
+        showOutline = options.showOutline;
+        showOutlineCheckbox.checked = options.showOutline;
+        
+        outlineColor = options.outlineColor;
+        outlineColorPicker.value = options.outlineColor;
+        
+        outlineThickness = options.outlineThickness;
+        outlineThicknessSlider.value = options.outlineThickness;
+        thicknessValueInput.value = options.outlineThickness;
+        
+        // Restore line style
+        lineStyle = options.lineStyle;
+        lineStyleSelect.value = options.lineStyle;
+        
+        // Restore loop options
+        loopCheckbox.checked = options.loopEnabled;
+        loopCount.value = options.loopCount;
+        
+        // Update preview
+        updateThicknessPreview();
+    }
+}
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -54,15 +111,18 @@ imageInput.addEventListener('change', (e) => {
 zoomSlider.addEventListener('input', (e) => {
     zoom = e.target.value;
     drawImage();
+    saveOptions();
 });
 
 showOutlineCheckbox.addEventListener('change', (e) => {
     showOutline = e.target.checked;
+    saveOptions();
 });
 
 outlineColorPicker.addEventListener('input', (e) => {
     outlineColor = e.target.value;
     updateThicknessPreview();
+    saveOptions();
 });
 
 outlineThicknessSlider.addEventListener('input', (e) => {
@@ -70,6 +130,7 @@ outlineThicknessSlider.addEventListener('input', (e) => {
     outlineThickness = value;
     thicknessValueInput.value = value;
     updateThicknessPreview();
+    saveOptions();
 });
 
 // Add new event listener for the number input
@@ -79,11 +140,13 @@ thicknessValueInput.addEventListener('input', (e) => {
     outlineThicknessSlider.value = value;
     thicknessValueInput.value = value; // Ensure valid number is shown
     updateThicknessPreview();
+    saveOptions();
 });
 
 lineStyleSelect.addEventListener('change', (e) => {
     lineStyle = e.target.value;
     updateThicknessPreview();
+    saveOptions();
 });
 
 canvas.addEventListener('mousedown', (e) => {
@@ -134,6 +197,11 @@ clearButton.addEventListener('click', () => {
     animationButton.classList.remove('active');
     clearButton.classList.add('active');
     selectionCenter = null; // Modify clearButton click handler to reset selection center
+    isAnimating = false;
+    stopButton.disabled = true;
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+    }
 });
 
 newSelectionButton.addEventListener('click', () => {
@@ -170,6 +238,7 @@ downloadButton.addEventListener('click', () => {
 animationTypeRadios.forEach(radio => {
     radio.addEventListener('change', (e) => {
         animationType = e.target.value;
+        saveOptions();
     });
 });
 
@@ -410,7 +479,19 @@ function switchToAnimationMode() {
 // Modify animateImage to remove crosshair during animation
 function animateImage(callback) {
     let i = 0;
+    let currentLoop = 0;
+    const maxLoops = loopCheckbox.checked ? parseInt(loopCount.value) : 1;
+    
+    isAnimating = true;
+    stopButton.disabled = false;
+
     function animate() {
+        if (!isAnimating) {
+            stopButton.disabled = true;
+            if (callback) callback();
+            return;
+        }
+
         if (i < path.length) {
             if (animationType === 'sprite') {
                 drawImage();
@@ -435,9 +516,20 @@ function animateImage(callback) {
                 }
             }
             i++;
-            requestAnimationFrame(animate);
-        } else if (callback) {
-            callback();
+            animationFrame = requestAnimationFrame(animate);
+        } else {
+            currentLoop++;
+            if (currentLoop < maxLoops) {
+                i = 0;
+                if (animationType === 'sprite') {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                isAnimating = false;
+                stopButton.disabled = true;
+                if (callback) callback();
+            }
         }
     }
     animate();
@@ -549,3 +641,19 @@ downloadImageButton.addEventListener('click', () => {
     link.href = canvas.toDataURL('image/png');
     link.click();
 });
+
+// Add stop button click handler
+stopButton.addEventListener('click', () => {
+    isAnimating = false;
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+    }
+    stopButton.disabled = true;
+});
+
+// Add new event listeners for loop controls
+loopCheckbox.addEventListener('change', saveOptions);
+loopCount.addEventListener('change', saveOptions);
+
+// Load options when page loads
+document.addEventListener('DOMContentLoaded', loadOptions);
