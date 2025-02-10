@@ -11,6 +11,7 @@
         <input type="file" id="imageInput" accept="image/*">
         <button id="clearButton">Clear Canvas</button>
         <button id="newSelectionButton">New Selection</button>
+        <div id="selectionPreview" class="selection-preview"></div>
         <button id="animationButton">Animation Mode</button>
         <button id="replayButton">Replay</button>
         <div class="radio-group">
@@ -27,7 +28,20 @@
         </div>
         <div class="checkbox-group">
             <label for="showOutline">Show Outline:</label>
-            <input type="checkbox" id="showOutline">
+            <input type="checkbox" id="showOutline" checked>
+            <label for="outlineColor">Color:</label>
+            <input type="color" id="outlineColor" value="#ff69b4">
+            <label for="outlineThickness">Thickness:</label>
+            <input type="range" id="outlineThickness" min="1" max="10" value="3">
+            <input type="number" id="thicknessValue" min="1" max="10" value="4">
+            <canvas id="thicknessPreview" width="50" height="30"></canvas>
+            <label for="lineStyle">Style:</label>
+            <select id="lineStyle">
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+                <option value="double">Double</option>
+            </select>
         </div>
         <div class="download-group">
             <button id="downloadButton">Download Video</button>
