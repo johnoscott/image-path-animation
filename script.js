@@ -4,14 +4,22 @@ const imageInput = document.getElementById('imageInput');
 const clearButton = document.getElementById('clearButton');
 const newSelectionButton = document.getElementById('newSelectionButton');
 const animationButton = document.getElementById('animationButton');
+const replayButton = document.getElementById('replayButton');
+const downloadButton = document.getElementById('downloadButton');
 const animationTypeRadios = document.getElementsByName('animationType');
+const zoomSlider = document.getElementById('zoomSlider');
+const showOutlineCheckbox = document.getElementById('showOutline');
 let image = new Image();
 let path = [];
 let isDrawing = false;
 let selectionPath = [];
 let isSelecting = false;
 let selectedImage = null;
-let animationType = 'sprite';
+let animationType = 'trail';
+let zoom = 100;
+let showOutline = true;
+let mediaRecorder;
+let recordedChunks = [];
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -22,10 +30,21 @@ imageInput.addEventListener('change', (e) => {
     reader.onload = (event) => {
         image.src = event.target.result;
         image.onload = () => {
-            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            zoomSlider.value = 100;
+            drawImage();
+            switchToSelectionMode();
         };
     };
     reader.readAsDataURL(file);
+});
+
+zoomSlider.addEventListener('input', (e) => {
+    zoom = e.target.value;
+    drawImage();
+});
+
+showOutlineCheckbox.addEventListener('change', (e) => {
+    showOutline = e.target.checked;
 });
 
 canvas.addEventListener('mousedown', (e) => {
@@ -67,7 +86,7 @@ canvas.addEventListener('mouseup', () => {
 clearButton.addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (image.src) {
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        drawImage();
     }
     path = [];
     selectionPath = [];
@@ -78,18 +97,34 @@ clearButton.addEventListener('click', () => {
 });
 
 newSelectionButton.addEventListener('click', () => {
-    isSelecting = true;
-    path = [];
-    newSelectionButton.classList.add('active');
-    animationButton.classList.remove('active');
-    clearButton.classList.remove('active');
+    switchToSelectionMode();
 });
 
 animationButton.addEventListener('click', () => {
-    isSelecting = false;
-    animationButton.classList.add('active');
-    newSelectionButton.classList.remove('active');
-    clearButton.classList.remove('active');
+    switchToAnimationMode();
+});
+
+replayButton.addEventListener('click', () => {
+    if (selectedImage && path.length > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (animationType === 'trail') {
+            drawImage();
+        }
+        animateImage();
+    }
+});
+
+downloadButton.addEventListener('click', () => {
+    if (selectedImage && path.length > 0) {
+        startRecording();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (animationType === 'trail') {
+            drawImage();
+        }
+        animateImage(() => {
+            stopRecording();
+        });
+    }
 });
 
 animationTypeRadios.forEach(radio => {
@@ -98,11 +133,30 @@ animationTypeRadios.forEach(radio => {
     });
 });
 
-function drawPath() {
+function drawImage() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (image.src) {
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const aspectRatio = image.width / image.height;
+    const canvasAspectRatio = canvas.width / canvas.height;
+    let width, height;
+
+    if (aspectRatio > canvasAspectRatio) {
+        width = canvas.width;
+        height = width / aspectRatio;
+    } else {
+        height = canvas.height;
+        width = height * aspectRatio;
     }
+
+    const zoomFactor = zoom / 100;
+    const zoomedWidth = width * zoomFactor;
+    const zoomedHeight = height * zoomFactor;
+    const offsetX = (canvas.width - zoomedWidth) / 2;
+    const offsetY = (canvas.height - zoomedHeight) / 2;
+
+    ctx.drawImage(image, offsetX, offsetY, zoomedWidth, zoomedHeight);
+}
+
+function drawPath() {
     ctx.beginPath();
     ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
@@ -112,10 +166,7 @@ function drawPath() {
 }
 
 function drawSelection() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (image.src) {
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    }
+    drawImage();
     ctx.beginPath();
     ctx.moveTo(selectionPath[0].x, selectionPath[0].y);
     for (let i = 1; i < selectionPath.length; i++) {
@@ -125,7 +176,25 @@ function drawSelection() {
     ctx.stroke();
     ctx.save();
     ctx.clip();
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const aspectRatio = image.width / image.height;
+    const canvasAspectRatio = canvas.width / canvas.height;
+    let width, height;
+
+    if (aspectRatio > canvasAspectRatio) {
+        width = canvas.width;
+        height = width / aspectRatio;
+    } else {
+        height = canvas.height;
+        width = height * aspectRatio;
+    }
+
+    const zoomFactor = zoom / 100;
+    const zoomedWidth = width * zoomFactor;
+    const zoomedHeight = height * zoomFactor;
+    const offsetX = (canvas.width - zoomedWidth) / 2;
+    const offsetY = (canvas.height - zoomedHeight) / 2;
+
+    ctx.drawImage(image, offsetX, offsetY, zoomedWidth, zoomedHeight);
     ctx.restore();
 }
 
@@ -163,26 +232,30 @@ function cutSelection() {
     selectedImage.src = tempCanvas.toDataURL();
 }
 
-function animateImage() {
+function animateImage(callback) {
     let i = 0;
     function animate() {
         if (i < path.length) {
             if (animationType === 'sprite') {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (image.src) {
-                    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                drawImage();
+                if (showOutline) {
+                    drawPath();
                 }
-                drawPath();
                 if (selectedImage) {
                     ctx.drawImage(selectedImage, path[i].x - selectedImage.width / 2, path[i].y - selectedImage.height / 2);
                 }
             } else if (animationType === 'trail') {
+                if (i === 0) {
+                    drawImage();
+                }
                 if (selectedImage) {
                     ctx.drawImage(selectedImage, path[i].x - selectedImage.width / 2, path[i].y - selectedImage.height / 2);
                 }
             }
             i++;
             requestAnimationFrame(animate);
+        } else if (callback) {
+            callback();
         }
     }
     animate();
@@ -193,4 +266,42 @@ function switchToAnimationMode() {
     animationButton.classList.add('active');
     newSelectionButton.classList.remove('active');
     clearButton.classList.remove('active');
+}
+
+function switchToSelectionMode() {
+    isSelecting = true;
+    path = [];
+    newSelectionButton.classList.add('active');
+    animationButton.classList.remove('active');
+    clearButton.classList.remove('active');
+}
+
+function startRecording() {
+    recordedChunks = [];
+    const stream = canvas.captureStream();
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+            recordedChunks.push(e.data);
+        }
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'animation.webm';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    mediaRecorder.start();
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
 }

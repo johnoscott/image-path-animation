@@ -15,7 +15,6 @@ body {
 
 canvas {
     border: 1px solid #000;
-    width: 100%;
     flex-grow: 1;
 }
 
@@ -36,6 +35,11 @@ button.animation-mode {
     color: white;
 }
 
+button.replay {
+    background-color: #ffc107;
+    color: white;
+}
+
 .radio-group {
     display: flex;
     align-items: center;
@@ -43,5 +47,35 @@ button.animation-mode {
 }
 
 .radio-group label {
+    margin-right: 10px;
+}
+
+.slider-group {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.slider-group label {
+    margin-right: 10px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.checkbox-group label {
+    margin-right: 10px;
+}
+
+.download-group {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.download-group label {
     margin-right: 10px;
 }

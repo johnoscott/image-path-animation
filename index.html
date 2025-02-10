@@ -12,13 +12,25 @@
         <button id="clearButton">Clear Canvas</button>
         <button id="newSelectionButton">New Selection</button>
         <button id="animationButton">Animation Mode</button>
+        <button id="replayButton">Replay</button>
         <div class="radio-group">
             <label>
-                <input type="radio" name="animationType" value="sprite" checked> Sprite
+                <input type="radio" name="animationType" value="sprite"> Sprite
             </label>
             <label>
-                <input type="radio" name="animationType" value="trail"> Trail
+                <input type="radio" name="animationType" value="trail" checked> Trail
             </label>
+        </div>
+        <div class="slider-group">
+            <label for="zoomSlider">Zoom:</label>
+            <input type="range" id="zoomSlider" min="10" max="200" value="100">
+        </div>
+        <div class="checkbox-group">
+            <label for="showOutline">Show Outline:</label>
+            <input type="checkbox" id="showOutline" checked>
+        </div>
+        <div class="download-group">
+            <button id="downloadButton">Download Video</button>
         </div>
     </div>
     <canvas id="canvas"></canvas>
