@@ -225,6 +225,10 @@ function cutSelection() {
     }
     tempCtx.closePath();
     tempCtx.clip();
+    if (!showOutline) {
+        tempCtx.strokeStyle = 'rgba(0, 0, 0, 0)';
+        tempCtx.stroke();
+    }
     tempCtx.drawImage(canvas, minX, minY, width, height, 0, 0, width, height);
     tempCtx.restore();
 
