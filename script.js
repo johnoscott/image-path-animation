@@ -229,6 +229,9 @@ function cutSelection() {
         tempCtx.strokeStyle = 'rgba(0, 0, 0, 0)';
         tempCtx.stroke();
     }
+    // Clear the selection path from the canvas so that the outline is not drawn
+    // TODO - Find a better way to do this. It doesn't seem to work.
+    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height); 
     tempCtx.drawImage(canvas, minX, minY, width, height, 0, 0, width, height);
     tempCtx.restore();
 

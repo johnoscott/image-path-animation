@@ -1,5 +1,6 @@
 body {
     margin: 0;
+    font-family: Arial, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -7,23 +8,54 @@ body {
     background-color: #f0f0f0;
 }
 
-.controls {
-    display: flex;
-    justify-content: center;
-    margin: 10px;
-    flex-wrap: wrap;
-}
-
 canvas {
-    border: 1px solid #000;
+    display: block;
+    margin: 0 auto;
+    background-color: #fff;
+    border: 1px solid #ccc;
     flex-grow: 1;
 }
 
-button {
+.controls {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.controls button,
+.controls input[type="file"],
+.controls input[type="range"],
+.controls input[type="checkbox"],
+.controls label {
     margin: 0 10px;
-    padding: 10px 20px;
+    padding: 10px;
     font-size: 16px;
+}
+
+.controls button {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #ccc;
     cursor: pointer;
+}
+
+.controls button:hover {
+    background-color: #f0f0f0;
+}
+
+.controls input[type="range"] {
+    width: 200px;
+}
+
+.controls input[type="checkbox"] {
+    transform: scale(1.5);
+    margin-right: 5px;
+}
+
+.controls label {
+    display: flex;
+    align-items: center;
 }
 
 button.active {
