@@ -144,6 +144,10 @@ button.replay {
     margin-right: 10px;
 }
 
+.download-group button {
+    margin: 0 5px;
+}
+
 .selection-preview {
     display: none;
     width: 50px;

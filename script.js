@@ -15,6 +15,8 @@ const thicknessPreview = document.getElementById('thicknessPreview');
 const thicknessPreviewCtx = thicknessPreview.getContext('2d');
 const lineStyleSelect = document.getElementById('lineStyle');
 const thicknessValueInput = document.getElementById('thicknessValue'); // Add with other const declarations at top
+const CROSSHAIR_SIZE = 20; // Add with other const declarations at top
+const downloadImageButton = document.getElementById('downloadImageButton'); // Add to const declarations at top
 let image = new Image();
 let path = [];
 let isDrawing = false;
@@ -30,6 +32,7 @@ let lineStyle = 'dotted';
 let mediaRecorder;
 let recordedChunks = [];
 let selectionBounds = null; // Add this with other global variables at the top
+let selectionCenter = null; // Add to the global variables at top
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -130,6 +133,7 @@ clearButton.addEventListener('click', () => {
     newSelectionButton.classList.remove('active');
     animationButton.classList.remove('active');
     clearButton.classList.add('active');
+    selectionCenter = null; // Modify clearButton click handler to reset selection center
 });
 
 newSelectionButton.addEventListener('click', () => {
@@ -313,6 +317,12 @@ function cutSelection() {
         height
     };
 
+    // Store selection center position
+    selectionCenter = {
+        x: minX + width/2,
+        y: minY + height/2
+    };
+
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = width;
@@ -363,6 +373,41 @@ function drawSelectionOutline(x, y) {
     ctx.restore();
 }
 
+// Add new function for drawing the complete selection guide
+function drawSelectionGuide(x, y) {
+    if (!selectionBounds || !selectedImage) return;
+
+    // Draw selection outline
+    drawSelectionOutline(x, y);
+
+    // Calculate center point of selection
+    const centerX = x;
+    const centerY = y;
+
+    // Draw crosshair at center
+    drawCrosshair(centerX, centerY);
+}
+
+// Modify switchToAnimationMode to use the new guide function
+function switchToAnimationMode() {
+    isSelecting = false;
+    animationButton.classList.add('active');
+    newSelectionButton.classList.remove('active');
+    clearButton.classList.remove('active');
+
+    // Show initial position with guide at original selection position
+    if (selectedImage && selectionBounds && selectionCenter) {
+        drawImage();
+        ctx.drawImage(
+            selectedImage, 
+            selectionCenter.x - selectedImage.width/2, 
+            selectionCenter.y - selectedImage.height/2
+        );
+        drawSelectionGuide(selectionCenter.x, selectionCenter.y);
+    }
+}
+
+// Modify animateImage to remove crosshair during animation
 function animateImage(callback) {
     let i = 0;
     function animate() {
@@ -398,13 +443,6 @@ function animateImage(callback) {
     animate();
 }
 
-function switchToAnimationMode() {
-    isSelecting = false;
-    animationButton.classList.add('active');
-    newSelectionButton.classList.remove('active');
-    clearButton.classList.remove('active');
-}
-
 function switchToSelectionMode() {
     isSelecting = true;
     path = [];
@@ -416,6 +454,7 @@ function switchToSelectionMode() {
     const previewContainer = document.getElementById('selectionPreview');
     previewContainer.style.display = 'none';
     previewContainer.innerHTML = '';
+    selectionCenter = null; // Modify switchToSelectionMode to reset selection center
 }
 
 function startRecording() {
@@ -479,4 +518,34 @@ function updateThicknessPreview() {
     thicknessPreviewCtx.setLineDash([]);
 }
 
+// Add new function for drawing crosshair
+function drawCrosshair(x, y) {
+    ctx.save();
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(x - CROSSHAIR_SIZE, y);
+    ctx.lineTo(x + CROSSHAIR_SIZE, y);
+    ctx.stroke();
+    
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(x, y - CROSSHAIR_SIZE);
+    ctx.lineTo(x, y + CROSSHAIR_SIZE);
+    ctx.stroke();
+    
+    ctx.restore();
+}
+
 updateThicknessPreview(); // Initial preview
+
+// Add new event listener
+downloadImageButton.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'animation-frame.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
