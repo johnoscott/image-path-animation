@@ -38,6 +38,8 @@ let selectionBounds = null; // Add this with other global variables at the top
 let selectionCenter = null; // Add to the global variables at top
 let isAnimating = false;
 let animationFrame = null;
+let dashOffset = 0; // Add with other global variables at top
+let pathAnimationFrame = null; // Add this with other global variables at top
 
 // Add new functions for localStorage
 function saveOptions() {
@@ -175,8 +177,20 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('mouseup', () => {
     if (isDrawing) {
         isDrawing = false;
+        // Cancel any ongoing path animation
+        if (pathAnimationFrame) {
+            cancelAnimationFrame(pathAnimationFrame);
+            pathAnimationFrame = null;
+        }
         if (!isSelecting) {
-            animateImage();
+            // Clear the path after a short delay
+            setTimeout(() => {
+                if (!isSelecting) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawImage();
+                    animateImage();
+                }
+            }, 100);
         } else {
             closeSelection();
             cutSelection();
@@ -281,16 +295,47 @@ function applyLineStyle(context) {
     }
 }
 
+// Replace the drawPath function with this version
 function drawPath() {
+    // Clear previous animation frame if it exists
+    if (pathAnimationFrame) {
+        cancelAnimationFrame(pathAnimationFrame);
+    }
+
+    // Clear and redraw background for animated styles
+    if (lineStyle === 'dashed' || lineStyle === 'dotted') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawImage();
+        
+        // Update dash offset for animation
+        dashOffset = (dashOffset + 1) % (outlineThickness * 5);
+    }
+
     ctx.save();
     ctx.strokeStyle = outlineColor;
     ctx.lineWidth = outlineThickness;
-    applyLineStyle(ctx);
+
+    if (lineStyle === 'dashed' || lineStyle === 'dotted') {
+        if (lineStyle === 'dashed') {
+            ctx.setLineDash([outlineThickness * 3, outlineThickness * 2]);
+        } else {
+            ctx.setLineDash([outlineThickness, outlineThickness]);
+        }
+        ctx.lineDashOffset = -dashOffset;
+        
+        if (isDrawing) {
+            pathAnimationFrame = requestAnimationFrame(() => drawPath());
+        }
+    } else {
+        applyLineStyle(ctx);
+    }
+
     ctx.beginPath();
     ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
         ctx.lineTo(path[i].x, path[i].y);
     }
+
     if (lineStyle === 'double') {
         ctx.lineWidth = outlineThickness/3;
         ctx.stroke();
